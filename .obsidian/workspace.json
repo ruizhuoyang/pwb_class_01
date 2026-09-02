@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "notes.md",
+                "file": "REACT-TUTORIAL.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "notes"
+              "title": "REACT-TUTORIAL"
             }
           }
         ]
@@ -188,9 +188,53 @@
       "bases:Create new base": false
     }
   },
-  "active": "a4ff999545d77998",
+  "active": "c67a11f609de911a",
   "lastOpenFiles": [
-    "Design 4197",
-    "notes.md"
+    "my-react-app/dist/index.html",
+    "my-react-app/dist/assets/index-IxnK-x4f.js",
+    "my-react-app/dist/assets/index-CHGb0evo.css",
+    "my-react-app/dist/assets",
+    "my-react-app/dist/icons.svg",
+    "my-react-app/dist/favicon.svg",
+    "my-react-app/dist",
+    "my-react-app/node_modules/three/src/nodes/geometry/RangeNode.js",
+    "my-react-app/node_modules/three/src/nodes/geometry",
+    "my-react-app/node_modules/three/src/nodes/fog/Fog.js",
+    "my-react-app/node_modules/three/src/nodes/fog",
+    "my-react-app/node_modules/three/src/nodes/shapes/Shapes.js",
+    "my-react-app/node_modules/three/src/nodes/shapes",
+    "my-react-app/node_modules/@tweenjs/tween.js/README.md",
+    "my-react-app/node_modules/@dimforge/rapier3d-compat/README.md",
+    "my-react-app/node_modules/@types/webxr/README.md",
+    "my-react-app/node_modules/@types/three/README.md",
+    "my-react-app/node_modules/meshoptimizer/README.md",
+    "my-react-app/node_modules/meshoptimizer/LICENSE.md",
+    "my-react-app/node_modules/fflate/README.md",
+    "my-react-app/node_modules/fflate/CHANGELOG.md",
+    "my-react-app/node_modules/@types/stats.js/README.md",
+    "my-react-app/node_modules/three/README.md",
+    "my-react-app/node_modules/three/examples/jsm/libs/draco/README.md",
+    "my-react-app/node_modules/three/examples/jsm/libs/basis/README.md",
+    "my-react-app/node_modules/three/src/nodes/materialx/DISCLAIMER.md",
+    "my-react-app/node_modules/detect-libc/README.md",
+    "my-react-app/node_modules/zod/README.md",
+    "my-react-app/node_modules/yocto-queue/readme.md",
+    "my-react-app/node_modules/yallist/README.md",
+    "my-react-app/node_modules/which/README.md",
+    "my-react-app/node_modules/which/CHANGELOG.md",
+    "my-react-app/node_modules/vite/README.md",
+    "my-react-app/node_modules/vite/LICENSE.md",
+    "my-react-app/node_modules/uri-js/README.md",
+    "my-react-app/node_modules/update-browserslist-db/README.md",
+    "my-react-app/node_modules/undici-types/README.md",
+    "my-react-app/node_modules/typescript/SECURITY.md",
+    "my-react-app/src/assets/vite.svg",
+    "my-react-app/src/assets/react.svg",
+    "my-react-app/src/assets/hero.png",
+    "my-react-app/public/icons.svg",
+    "my-react-app/public/favicon.svg",
+    "src/assets/vite.svg",
+    "src/assets/react.svg",
+    "src/assets/hero.png"
   ]
 }
