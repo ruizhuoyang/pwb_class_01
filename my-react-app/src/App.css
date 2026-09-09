@@ -7,24 +7,40 @@
 }
 
 .app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   flex-shrink: 0;
-  padding: 1rem 1.5rem;
+  padding: 0.5rem 0.75rem;
   border-bottom: 1px solid var(--border);
   background: var(--header-bg);
 }
 
+.app-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
 .app-title {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 0.8125rem;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--text-h);
+  white-space: nowrap;
 }
 
 .app-subtitle {
-  margin: 0.25rem 0 0;
-  font-size: 0.875rem;
+  margin: 0;
+  font-size: 0.625rem;
   color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .app-main {
@@ -34,6 +50,7 @@
 }
 
 .canvas-section {
+  position: relative;
   flex: 1;
   min-width: 0;
   min-height: 0;
@@ -46,5 +63,9 @@
 
   .canvas-section {
     min-height: 60svh;
+  }
+
+  .app-subtitle {
+    display: none;
   }
 }

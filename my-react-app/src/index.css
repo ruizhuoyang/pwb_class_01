@@ -5,8 +5,13 @@
   --bg: #0d0f14;
   --header-bg: #12151c;
   --panel-bg: #12151c;
+  --bg-input: #0f1114;
   --border: #2a2f3a;
-  --accent: #7c6cff;
+  --accent: #3ecf8e;
+  --accent-dim: rgba(62, 207, 142, 0.2);
+  --accent-hover: #52e09e;
+
+  --font-mono: Consolas, 'Cascadia Mono', ui-monospace, monospace;
 
   font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.5;
