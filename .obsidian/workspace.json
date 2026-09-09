@@ -4,21 +4,21 @@
     "type": "split",
     "children": [
       {
-        "id": "0d7f30c59ed4c915",
+        "id": "b8b7198a0b47c97f",
         "type": "tabs",
         "children": [
           {
-            "id": "c67a11f609de911a",
+            "id": "b7cecb20c60b4575",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "REACT-TUTORIAL.md",
+                "file": "my-react-app/README.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "REACT-TUTORIAL"
+              "title": "README"
             }
           }
         ]
@@ -119,7 +119,7 @@
               "type": "outgoing-link",
               "state": {
                 "file": "notes.md",
-                "linksCollapsed": false,
+                "linksCollapsed": true,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
@@ -170,7 +170,8 @@
               "title": "Outline"
             }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "horizontal",
@@ -188,21 +189,28 @@
       "bases:Create new base": false
     }
   },
-  "active": "c67a11f609de911a",
+  "active": "b7cecb20c60b4575",
   "lastOpenFiles": [
-    "my-react-app/dist/index.html",
-    "my-react-app/dist/assets/index-IxnK-x4f.js",
-    "my-react-app/dist/assets/index-CHGb0evo.css",
-    "my-react-app/dist/assets",
-    "my-react-app/dist/icons.svg",
+    "my-react-app/src/components/ErosionCanvas.tsx",
+    "my-react-app/src/lib/erosion.ts",
+    "my-react-app/dist/assets/index-DPVg9aIJ.css",
+    "my-react-app/dist/assets/index-BFm2cKS6.js",
+    "my-react-app/dist/assets/index-CI3aSFZ8.js",
+    "my-react-app/dist/assets/index-CEJACzo0.css",
+    "my-react-app/dist/assets/index-Bj5yQOf6.js",
+    "my-react-app/src/components/NoisePreview.css",
+    "my-react-app/src/components/NoisePreview.tsx",
+    "my-react-app/src/lib/generateNoiseTexture.ts",
+    "my-react-app/dist/assets/index-CWVo15pj.css",
+    "notes.md",
+    "STYLE-GUIDE.md",
+    "Tutorials/REACT-TUTORIAL.md",
+    "Tutorials/THREEJS-RESOURCES.md",
+    "Untitled 1.canvas",
+    "2026-09-08.md",
+    "Untitled.canvas",
     "my-react-app/dist/favicon.svg",
-    "my-react-app/dist",
-    "my-react-app/node_modules/three/src/nodes/geometry/RangeNode.js",
-    "my-react-app/node_modules/three/src/nodes/geometry",
-    "my-react-app/node_modules/three/src/nodes/fog/Fog.js",
-    "my-react-app/node_modules/three/src/nodes/fog",
-    "my-react-app/node_modules/three/src/nodes/shapes/Shapes.js",
-    "my-react-app/node_modules/three/src/nodes/shapes",
+    "my-react-app/dist/icons.svg",
     "my-react-app/node_modules/@tweenjs/tween.js/README.md",
     "my-react-app/node_modules/@dimforge/rapier3d-compat/README.md",
     "my-react-app/node_modules/@types/webxr/README.md",
@@ -223,11 +231,6 @@
     "my-react-app/node_modules/which/README.md",
     "my-react-app/node_modules/which/CHANGELOG.md",
     "my-react-app/node_modules/vite/README.md",
-    "my-react-app/node_modules/vite/LICENSE.md",
-    "my-react-app/node_modules/uri-js/README.md",
-    "my-react-app/node_modules/update-browserslist-db/README.md",
-    "my-react-app/node_modules/undici-types/README.md",
-    "my-react-app/node_modules/typescript/SECURITY.md",
     "my-react-app/src/assets/vite.svg",
     "my-react-app/src/assets/react.svg",
     "my-react-app/src/assets/hero.png",
