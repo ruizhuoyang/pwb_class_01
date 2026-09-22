@@ -34,6 +34,7 @@ export default function ThreeCanvas({
   // Track versions to detect changes inside the animation loop.
   const segmentsRef = useRef(sceneParams.planeSegments)
   const dispScaleRef = useRef(sceneParams.displacementScale)
+  const fogEnabledRef = useRef(sceneParams.fog)
   const mapVersionRef = useRef(0)
 
   // Sync refs in effects (not during render) to satisfy lint rules.
@@ -55,8 +56,10 @@ export default function ThreeCanvas({
 
     // ── Renderer / scene / camera ──
     const scene = new THREE.Scene()
-    const bgColor = new THREE.Color(0x0a0b0d)
-    scene.background = bgColor
+    scene.background = new THREE.Color(0x0a0b0d)
+
+    const fog = new THREE.FogExp2(0x0a0b0d, 0.045)
+    if (sceneRef.current.fog) scene.fog = fog
 
     const camera = new THREE.PerspectiveCamera(
       55,
@@ -102,8 +105,6 @@ export default function ThreeCanvas({
 
     let colorTexture: THREE.CanvasTexture | null = null
     let currentMapVersion = -1
-    let fogEnabled = sceneRef.current.fog
-    if (fogEnabled) scene.fog = new THREE.FogExp2(bgColor.getHex(), 0.06)
 
     const rebuildGeometry = () => {
       const seg = sceneRef.current.planeSegments
@@ -183,16 +184,18 @@ export default function ThreeCanvas({
         applyHeightfield()
       }
 
+      // Toggle fog
+      const wantFog = fogEnabledRef.current
+      if (wantFog && !scene.fog) {
+        scene.fog = fog
+      } else if (!wantFog && scene.fog) {
+        scene.fog = null
+      }
+
       if (mapVersionRef.current !== currentMapVersion) {
         currentMapVersion = mapVersionRef.current
         applyColorMap()
         applyHeightfield()
-      }
-
-      // Fog toggle
-      if (sceneRef.current.fog !== fogEnabled) {
-        fogEnabled = sceneRef.current.fog
-        scene.fog = fogEnabled ? new THREE.FogExp2(bgColor.getHex(), 0.06) : null
       }
 
       controls.update()
@@ -238,6 +241,11 @@ export default function ThreeCanvas({
   useEffect(() => {
     dispScaleRef.current = sceneParams.displacementScale
   }, [sceneParams.displacementScale])
+
+  // Sync fog ref.
+  useEffect(() => {
+    fogEnabledRef.current = sceneParams.fog
+  }, [sceneParams.fog])
 
   return (
     <div

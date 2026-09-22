@@ -1,11 +1,10 @@
 import './ViewSwitcher.css'
 
-export type ViewMode = '3d' | '2d' | 'sim'
+export type ViewMode = '3d' | '2d'
 
 const VIEWS: { value: ViewMode; label: string }[] = [
-  { value: '3d', label: '3D Scene' },
-  { value: '2d', label: '2D Noise' },
-  { value: 'sim', label: 'Simulation' },
+  { value: '3d', label: '3D' },
+  { value: '2d', label: '2D' },
 ]
 
 type ViewSwitcherProps = {

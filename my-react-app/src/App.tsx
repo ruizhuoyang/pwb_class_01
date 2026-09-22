@@ -3,7 +3,7 @@ import ThreeCanvas, { type SceneParams } from './components/ThreeCanvas'
 import NoiseCanvas from './components/NoiseCanvas'
 import NoisePreview from './components/NoisePreview'
 import ErosionCanvas from './components/ErosionCanvas'
-import SidePanel from './components/SidePanel'
+import SidePanel, { type SubTab } from './components/SidePanel'
 import ViewSwitcher, { type ViewMode } from './components/ViewSwitcher'
 import { createDefaultLayers, type ColorMode, type NoiseLayer } from './lib/noise'
 import {
@@ -26,20 +26,16 @@ const DEFAULT_SCENE: SceneParams = {
   fog: false,
 }
 
-const SUBTITLE: Record<ViewMode, string> = {
-  '3d': 'Interactive Three.js Canvas',
-  '2d': 'Procedural Noise',
-  sim: 'Hydraulic Erosion',
-}
-
 function App() {
   const [view, setView] = useState<ViewMode>('3d')
+  const [subTab, setSubTab] = useState<SubTab>('noise')
   const [layers, setLayers] = useState<NoiseLayer[]>(createDefaultLayers)
   const [sceneParams, setSceneParams] = useState<SceneParams>(DEFAULT_SCENE)
   const [showPreview, setShowPreview] = useState(false)
 
   const [colorMap, setColorMap] = useState<HTMLCanvasElement | null>(null)
   const [heightfield, setHeightfield] = useState<Float32Array | null>(null)
+  const [appliedSource, setAppliedSource] = useState<'noise' | 'erosion' | null>(null)
 
   // Erosion state
   const [erosionParams, setErosionParams] = useState<ErosionParams>(DEFAULT_EROSION_PARAMS)
@@ -51,11 +47,13 @@ function App() {
     const size = sceneParams.noiseFieldSize
     setColorMap(generateNoiseTexture(layers, size))
     setHeightfield(generateHeightfield(layers, size))
+    setAppliedSource('noise')
   }, [layers, sceneParams.noiseFieldSize])
 
   const handleClear = useCallback(() => {
     setColorMap(null)
     setHeightfield(null)
+    setAppliedSource(null)
   }, [])
 
   // Erosion callbacks
@@ -83,14 +81,26 @@ function App() {
     setColorMap(heightmapToTexture(erosionState.heightmap, size, erosionColorMode))
     setHeightfield(new Float32Array(erosionState.heightmap))
     setSceneParams((prev) => ({ ...prev, noiseFieldSize: size }))
+    setAppliedSource('erosion')
   }, [erosionState, erosionParams.mapSize, erosionColorMode])
+
+  // Subtitle logic
+  const subtitle =
+    view === '3d'
+      ? 'Interactive Three.js Canvas'
+      : subTab === 'simulation'
+        ? 'Hydraulic Erosion Simulation'
+        : 'Procedural Noise Map'
+
+  // In 2D view, show erosion canvas when simulation sub-tab is active
+  const showErosion = view === '2d' && subTab === 'simulation'
 
   return (
     <div className="app">
       <header className="app-header">
         <div className="app-brand">
           <h1 className="app-title">PWB Class 01</h1>
-          <p className="app-subtitle">{SUBTITLE[view]}</p>
+          <p className="app-subtitle">{subtitle}</p>
         </div>
         <ViewSwitcher view={view} onChange={setView} />
       </header>
@@ -98,13 +108,7 @@ function App() {
       <main className="app-main">
         <section
           className="canvas-section"
-          aria-label={
-            view === '3d'
-              ? '3D viewport'
-              : view === '2d'
-                ? '2D noise viewport'
-                : 'Erosion simulation'
-          }
+          aria-label={view === '3d' ? '3D viewport' : '2D viewport'}
         >
           {view === '3d' && (
             <>
@@ -123,8 +127,8 @@ function App() {
               )}
             </>
           )}
-          {view === '2d' && <NoiseCanvas layers={layers} />}
-          {view === 'sim' && (
+          {view === '2d' && !showErosion && <NoiseCanvas layers={layers} />}
+          {showErosion && (
             <ErosionCanvas
               erosionState={erosionState}
               erosionParams={erosionParams}
@@ -136,11 +140,14 @@ function App() {
         </section>
         <SidePanel
           view={view}
+          subTab={subTab}
+          onSubTabChange={setSubTab}
           layers={layers}
           onLayersChange={setLayers}
           sceneParams={sceneParams}
           onSceneParamsChange={setSceneParams}
           hasAppliedMap={colorMap !== null}
+          appliedSource={appliedSource}
           showPreview={showPreview}
           onTogglePreview={() => setShowPreview((p) => !p)}
           onApply={handleApply}
