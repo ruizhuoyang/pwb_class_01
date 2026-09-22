@@ -1,4 +1,4 @@
-# Style Guide — PWB Class 01
+# Style Guide — Procedural World Building
 
 Visual language for the app UI. Inspired by **TouchDesigner** and **Max/MSP**: dense, technical, dark, and parameter-driven.
 
@@ -63,7 +63,7 @@ Visual language for the app UI. Inspired by **TouchDesigner** and **Max/MSP**: d
 
 | Role | Size | Weight | Font | Case | Example |
 |------|------|--------|------|------|---------|
-| App title | `13px` | 600 | sans | uppercase | `PWB CLASS 01` |
+| App title | `13px` | 600 | sans | uppercase | `PROCEDURAL WORLD BUILDING` |
 | Section label | `10px` | 600 | sans | uppercase | `CONTROLS` |
 | Parameter label | `11px` | 400 | sans | as-is | `Rotation` |
 | Parameter value | `11px` | 500 | **mono** | as-is | `0.742` |

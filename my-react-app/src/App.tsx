@@ -99,7 +99,7 @@ function App() {
     <div className="app">
       <header className="app-header">
         <div className="app-brand">
-          <h1 className="app-title">PWB Class 01</h1>
+          <h1 className="app-title">Procedural World Building</h1>
           <p className="app-subtitle">{subtitle}</p>
         </div>
         <ViewSwitcher view={view} onChange={setView} />
