@@ -1,0 +1,43 @@
+.view-switcher {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.view-switcher__button {
+  padding: 0 0.75rem;
+  height: 22px;
+  font: inherit;
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: var(--panel-bg);
+  border: none;
+  border-left: 1px solid var(--border);
+  cursor: pointer;
+  transition:
+    color 0.12s,
+    background 0.12s;
+}
+
+.view-switcher__button:first-child {
+  border-left: none;
+}
+
+.view-switcher__button:hover {
+  color: var(--text);
+  background: var(--bg-input);
+}
+
+.view-switcher__button[aria-pressed='true'] {
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.view-switcher__button:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}

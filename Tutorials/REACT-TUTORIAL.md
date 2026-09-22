@@ -42,13 +42,13 @@ npm --version
 Make sure your terminal shows this path:
 
 ```powershell
-cd C:\Users\ry369\Desktop\pwb_class_01
+cd C:\Users\ry369\Desktop\ProceduralWorldBuilding
 ```
 
 Your prompt should look like:
 
 ```text
-PS C:\Users\ry369\Desktop\pwb_class_01>
+PS C:\Users\ry369\Desktop\ProceduralWorldBuilding>
 ```
 
 If it shows `PS C:\Users\ry369>` instead, you are in the wrong folder. Run the `cd` command above first.
@@ -96,7 +96,7 @@ Do **not** pick "Cancel operation".
 ### Question 2: Package name
 
 ```text
-Package name: pwb-class-01
+Package name: procedural-world-building
 ```
 
 | What to pick | Why |
@@ -162,7 +162,7 @@ Both work. ESLint is the safer choice for learning.
 You should see something like:
 
 ```text
-Scaffolding project in C:\Users\ry369\Desktop\pwb_class_01...
+Scaffolding project in C:\Users\ry369\Desktop\ProceduralWorldBuilding...
 Done. Now run:
 
   npm install
@@ -173,7 +173,7 @@ Done. Now run:
 
 ## Step 3: Install Dependencies
 
-**Make sure you are still in the project folder** (`pwb_class_01`).
+**Make sure you are still in the project folder** (`ProceduralWorldBuilding`).
 
 Run:
 
@@ -273,7 +273,7 @@ You do not need to learn all of TypeScript on day one. Start by editing text and
 After setup, the important files and folders are:
 
 ```text
-pwb_class_01/
+ProceduralWorldBuilding/
 ├── index.html          # Main HTML page (entry point)
 ├── package.json        # Project settings and scripts
 ├── tsconfig.json       # TypeScript settings
@@ -300,7 +300,7 @@ You ran the command in the **wrong folder**.
 Fix:
 
 ```powershell
-cd C:\Users\ry369\Desktop\pwb_class_01
+cd C:\Users\ry369\Desktop\ProceduralWorldBuilding
 npm install
 ```
 
@@ -335,7 +335,7 @@ npm install
 Your project may have `App.jsx` instead of `App.tsx`. For the basic TypeScript setup, run the create command again with the TypeScript template:
 
 ```powershell
-cd C:\Users\ry369\Desktop\pwb_class_01
+cd C:\Users\ry369\Desktop\ProceduralWorldBuilding
 npm create vite@latest . -- --template react-ts
 ```
 
@@ -358,7 +358,7 @@ Once everything works:
 Copy and run these **one at a time** in PowerShell:
 
 ```powershell
-cd C:\Users\ry369\Desktop\pwb_class_01
+cd C:\Users\ry369\Desktop\ProceduralWorldBuilding
 npm create vite@latest . -- --template react-ts
 npm install
 npm run dev
