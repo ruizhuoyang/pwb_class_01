@@ -189,4 +189,4 @@ When you find something inspiring, add a row:
 
 ## Version
 
-- **v1.0** — Initial resource list for PWB Class 01
+- **v1.0** — Initial resource list for Procedural World Building
