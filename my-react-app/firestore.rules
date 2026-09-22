@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId}/configs/main {
+      allow get: if request.auth != null && request.auth.uid == userId;
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['scene', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['scene', 'updatedAt'])
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.scene.keys().hasOnly(['planeSegments', 'noiseFieldSize', 'displacementScale', 'fog'])
+        && request.resource.data.scene.keys().hasAll(['planeSegments', 'noiseFieldSize', 'displacementScale', 'fog'])
+        && request.resource.data.scene.planeSegments is number
+        && request.resource.data.scene.planeSegments >= 4
+        && request.resource.data.scene.planeSegments <= 1024
+        && request.resource.data.scene.noiseFieldSize is number
+        && request.resource.data.scene.noiseFieldSize >= 32
+        && request.resource.data.scene.noiseFieldSize <= 1024
+        && request.resource.data.scene.displacementScale is number
+        && request.resource.data.scene.displacementScale >= 0
+        && request.resource.data.scene.displacementScale <= 6
+        && request.resource.data.scene.fog is bool;
+    }
+  }
+}

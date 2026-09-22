@@ -5,6 +5,7 @@ import NoisePreview from './components/NoisePreview'
 import ErosionCanvas from './components/ErosionCanvas'
 import SidePanel, { type SubTab } from './components/SidePanel'
 import ViewSwitcher, { type ViewMode } from './components/ViewSwitcher'
+import FirebaseControls from './components/FirebaseControls'
 import { createDefaultLayers, type ColorMode, type NoiseLayer } from './lib/noise'
 import {
   generateHeightfield,
@@ -102,6 +103,7 @@ function App() {
           <h1 className="app-title">Procedural World Building</h1>
           <p className="app-subtitle">{subtitle}</p>
         </div>
+        <FirebaseControls scene={sceneParams} onLoadScene={setSceneParams} />
         <ViewSwitcher view={view} onChange={setView} />
       </header>
 
