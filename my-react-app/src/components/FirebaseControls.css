@@ -1,0 +1,5 @@
+.firebase-controls { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; margin-left: auto; }
+.firebase-controls button { background: #243243; color: white; border: 1px solid #526073; border-radius: .3rem; padding: .3rem .5rem; cursor: pointer; font: inherit; font-size: .68rem; }
+.firebase-controls button:disabled { opacity: .5; cursor: wait; }
+.firebase-controls__user { color: #cbd5e1; font-size: .68rem; max-width: 8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.firebase-controls__message { color: #e6c465; font-size: .68rem; max-width: 12rem; }
