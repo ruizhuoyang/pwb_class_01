@@ -35,7 +35,7 @@ export default function FirebaseControls({ scene, onLoadScene }: Props) {
     try {
       await action()
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : '操作失败，请重试。')
+      setMessage(error instanceof Error ? error.message : 'Operation failed. Please try again.')
     } finally {
       setBusy(false)
     }
@@ -54,21 +54,21 @@ export default function FirebaseControls({ scene, onLoadScene }: Props) {
             await setDoc(doc(currentDb, 'users', user.uid, 'configs', 'main'), {
               scene: { ...scene }, updatedAt: serverTimestamp(),
             })
-            setMessage('地形参数已保存')
-          })}>保存参数</button>
+            setMessage('Terrain settings saved.')
+          })}>Save</button>
           <button disabled={busy} onClick={() => run(async () => {
             const snapshot = await getDoc(doc(currentDb, 'users', user.uid, 'configs', 'main'))
-            if (!snapshot.exists()) { setMessage('还没有保存的参数'); return }
+            if (!snapshot.exists()) { setMessage('No saved terrain settings yet.'); return }
             const saved = snapshot.data().scene
-            if (!validScene(saved)) throw new Error('保存的数据格式不正确')
+            if (!validScene(saved)) throw new Error('Saved terrain settings have an invalid format.')
             onLoadScene(saved)
-            setMessage('地形参数已载入')
-          })}>载入参数</button>
-          <button disabled={busy} onClick={() => run(() => signOut(currentAuth))}>退出</button>
+            setMessage('Terrain settings loaded.')
+          })}>Load</button>
+          <button disabled={busy} onClick={() => run(() => signOut(currentAuth))}>Sign out</button>
         </>
       ) : (
         <button disabled={busy} onClick={() => run(async () => { await signInWithPopup(currentAuth, new GoogleAuthProvider()) })}>
-          使用 Google 登录
+          Sign in with Google
         </button>
       )}
       {message && <span className="firebase-controls__message" role="status">{message}</span>}
