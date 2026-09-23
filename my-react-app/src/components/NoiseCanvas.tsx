@@ -6,6 +6,7 @@ import {
   createNoiseSampler,
   type NoiseLayer,
 } from '../lib/noise'
+import PanZoomViewport from './PanZoomViewport'
 import './NoiseCanvas.css'
 
 type NoiseCanvasProps = {
@@ -91,11 +92,13 @@ export default function NoiseCanvas({ layers }: NoiseCanvasProps) {
 
   return (
     <div ref={containerRef} className="noise-canvas">
-      <canvas
-        ref={canvasRef}
-        className="noise-canvas__surface"
-        aria-label="Noise map"
-      />
+      <PanZoomViewport label="Current Height Map">
+        <canvas
+          ref={canvasRef}
+          className="noise-canvas__surface"
+          aria-label="Noise map"
+        />
+      </PanZoomViewport>
     </div>
   )
 }

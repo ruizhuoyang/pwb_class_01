@@ -1,7 +1,12 @@
-import { useCallback, useState } from 'react'
-import ThreeCanvas, { type SceneParams } from './components/ThreeCanvas'
+import { useCallback, useRef, useState } from 'react'
+import ThreeCanvas, {
+  type CameraView,
+  type SceneParams,
+  type ThreeCanvasHandle,
+  type ViewportParams,
+} from './components/ThreeCanvas'
 import NoiseCanvas from './components/NoiseCanvas'
-import NoisePreview from './components/NoisePreview'
+import MapReference from './components/MapReference'
 import ErosionCanvas from './components/ErosionCanvas'
 import SidePanel, { type SubTab } from './components/SidePanel'
 import ViewSwitcher, { type ViewMode } from './components/ViewSwitcher'
@@ -27,12 +32,23 @@ const DEFAULT_SCENE: SceneParams = {
   fog: false,
 }
 
+const DEFAULT_VIEWPORT: ViewportParams = {
+  solid: true,
+  wireframe: false,
+  axes: false,
+  grid: true,
+}
+
 function App() {
   const [view, setView] = useState<ViewMode>('3d')
   const [subTab, setSubTab] = useState<SubTab>('noise')
   const [layers, setLayers] = useState<NoiseLayer[]>(createDefaultLayers)
   const [sceneParams, setSceneParams] = useState<SceneParams>(DEFAULT_SCENE)
-  const [showPreview, setShowPreview] = useState(false)
+  const [viewport, setViewport] = useState<ViewportParams>(DEFAULT_VIEWPORT)
+  const [showPreview, setShowPreview] = useState(true)
+
+  const threeRef = useRef<ThreeCanvasHandle>(null)
+  const [storedView, setStoredView] = useState<CameraView | null>(null)
 
   const [colorMap, setColorMap] = useState<HTMLCanvasElement | null>(null)
   const [heightfield, setHeightfield] = useState<Float32Array | null>(null)
@@ -81,17 +97,22 @@ function App() {
     const size = erosionParams.mapSize
     setColorMap(heightmapToTexture(erosionState.heightmap, size, erosionColorMode))
     setHeightfield(new Float32Array(erosionState.heightmap))
-    setSceneParams((prev) => ({ ...prev, noiseFieldSize: size }))
     setAppliedSource('erosion')
   }, [erosionState, erosionParams.mapSize, erosionColorMode])
 
-  // Subtitle logic
+  const handleResetCamera = useCallback(() => threeRef.current?.resetView(), [])
+  const handleStoreView = useCallback(() => {
+    const current = threeRef.current?.getView()
+    if (current) setStoredView(current)
+  }, [])
+  const handleRecallView = useCallback(() => {
+    if (storedView) threeRef.current?.setView(storedView)
+  }, [storedView])
+
   const subtitle =
     view === '3d'
-      ? 'Interactive Three.js Canvas'
-      : subTab === 'simulation'
-        ? 'Hydraulic Erosion Simulation'
-        : 'Procedural Noise Map'
+      ? 'Visualize · Inspect · Experience'
+      : 'Generate · Simulate · Edit'
 
   // In 2D view, show erosion canvas when simulation sub-tab is active
   const showErosion = view === '2d' && subTab === 'simulation'
@@ -115,15 +136,16 @@ function App() {
           {view === '3d' && (
             <>
               <ThreeCanvas
+                ref={threeRef}
                 sceneParams={sceneParams}
+                viewport={viewport}
                 colorMap={colorMap}
                 heightfield={heightfield}
               />
               {showPreview && (
-                <NoisePreview
-                  layers={layers}
-                  noiseFieldSize={sceneParams.noiseFieldSize}
-                  onApply={handleApply}
+                <MapReference
+                  colorMap={colorMap}
+                  source={appliedSource}
                   onClose={() => setShowPreview(false)}
                 />
               )}
@@ -148,6 +170,12 @@ function App() {
           onLayersChange={setLayers}
           sceneParams={sceneParams}
           onSceneParamsChange={setSceneParams}
+          viewport={viewport}
+          onViewportChange={setViewport}
+          onResetCamera={handleResetCamera}
+          onStoreView={handleStoreView}
+          onRecallView={handleRecallView}
+          hasStoredView={storedView !== null}
           hasAppliedMap={colorMap !== null}
           appliedSource={appliedSource}
           showPreview={showPreview}

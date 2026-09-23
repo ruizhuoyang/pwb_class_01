@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import ParamSlider from './ParamSlider'
 import type { ViewMode } from './ViewSwitcher'
-import type { SceneParams } from './ThreeCanvas'
+import type { SceneParams, ViewportParams } from './ThreeCanvas'
 import {
   BLEND_MODES,
   CELL_RETURNS,
@@ -23,6 +23,33 @@ import './SidePanel.css'
 
 export type SubTab = 'noise' | 'simulation'
 
+type SectionId =
+  // 3D World
+  | 'display'
+  | 'geometry'
+  | 'environment'
+  | 'camera'
+  | 'world'
+  // 2D Terrain — Noise tab
+  | 'layers'
+  | 'noiseOutput'
+  // 2D Terrain — Simulation tab
+  | 'simulation'
+  // 2D Terrain — both tabs
+  | 'analysis'
+
+const DEFAULT_OPEN: Record<SectionId, boolean> = {
+  display: true,
+  geometry: true,
+  environment: false,
+  camera: false,
+  world: false,
+  layers: true,
+  noiseOutput: true,
+  simulation: true,
+  analysis: false,
+}
+
 type SidePanelProps = {
   view: ViewMode
   subTab: SubTab
@@ -31,6 +58,12 @@ type SidePanelProps = {
   onLayersChange: (layers: NoiseLayer[]) => void
   sceneParams: SceneParams
   onSceneParamsChange: (params: SceneParams) => void
+  viewport: ViewportParams
+  onViewportChange: (params: ViewportParams) => void
+  onResetCamera: () => void
+  onStoreView: () => void
+  onRecallView: () => void
+  hasStoredView: boolean
   hasAppliedMap: boolean
   appliedSource: 'noise' | 'erosion' | null
   onTogglePreview: () => void
@@ -51,6 +84,65 @@ type SidePanelProps = {
   onApplyErosion: () => void
 }
 
+type AccordionSectionProps = {
+  id: SectionId
+  label: string
+  open: boolean
+  onToggle: (id: SectionId) => void
+  children: ReactNode
+}
+
+function AccordionSection({ id, label, open, onToggle, children }: AccordionSectionProps) {
+  return (
+    <section className={`accordion ${open ? 'accordion--open' : ''}`}>
+      <button
+        type="button"
+        className="accordion__header"
+        aria-expanded={open}
+        aria-controls={`panel-section-${id}`}
+        onClick={() => onToggle(id)}
+      >
+        <span className="accordion__chevron" aria-hidden="true">▸</span>
+        <span className="accordion__label">{label}</span>
+      </button>
+      {open && (
+        <div id={`panel-section-${id}`} className="accordion__body">
+          {children}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function ToggleRow({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string
+  checked: boolean
+  onChange: (checked: boolean) => void
+}) {
+  return (
+    <div className="side-panel__row">
+      <span className="side-panel__label">{label}</span>
+      <label className="side-panel__toggle">
+        <input type="checkbox" aria-label={label} checked={checked} onChange={(e) => onChange(e.target.checked)} />
+        <span className="side-panel__toggle-track" />
+      </label>
+    </div>
+  )
+}
+
+function PlannedRow({ label }: { label: string }) {
+  return (
+    <div className="side-panel__row side-panel__planned">
+      <span className="side-panel__label">{label}</span>
+      <span className="side-panel__badge">planned</span>
+    </div>
+  )
+}
+
 export default function SidePanel({
   view,
   subTab,
@@ -59,6 +151,12 @@ export default function SidePanel({
   onLayersChange,
   sceneParams,
   onSceneParamsChange,
+  viewport,
+  onViewportChange,
+  onResetCamera,
+  onStoreView,
+  onRecallView,
+  hasStoredView,
   hasAppliedMap,
   appliedSource,
   onTogglePreview,
@@ -80,11 +178,26 @@ export default function SidePanel({
   const [expandedLayer, setExpandedLayer] = useState<string | null>(
     layers[0]?.id ?? null,
   )
+  const [openSections, setOpenSections] = useState<Record<SectionId, boolean>>(DEFAULT_OPEN)
+
+  const toggleSection = (id: SectionId) =>
+    setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }))
+
+  const section = (id: SectionId, label: string, children: ReactNode) => (
+    <AccordionSection id={id} label={label} open={openSections[id]} onToggle={toggleSection}>
+      {children}
+    </AccordionSection>
+  )
 
   const updateScene = <Key extends keyof SceneParams>(
     key: Key,
     value: SceneParams[Key],
   ) => onSceneParamsChange({ ...sceneParams, [key]: value })
+
+  const updateViewport = <Key extends keyof ViewportParams>(
+    key: Key,
+    value: ViewportParams[Key],
+  ) => onViewportChange({ ...viewport, [key]: value })
 
   const updateErosion = <Key extends keyof ErosionParams>(
     key: Key,
@@ -147,104 +260,123 @@ export default function SidePanel({
   }
 
   // ═══════════════════════════════════════
-  // ── 3D view panel ──
+  // 3D World — visualize, inspect, experience
   // ═══════════════════════════════════════
   if (view === '3d') {
     return (
-      <aside className="side-panel" aria-label="Scene controls">
-        <h2 className="side-panel__title">Plane</h2>
+      <aside className="side-panel" aria-label="3D world controls">
+        {section('display', 'Display', (
+          <>
+            <ToggleRow label="Solid" checked={viewport.solid} onChange={(v) => updateViewport('solid', v)} />
+            <ToggleRow label="Wireframe" checked={viewport.wireframe} onChange={(v) => updateViewport('wireframe', v)} />
+            <ToggleRow label="Axis" checked={viewport.axes} onChange={(v) => updateViewport('axes', v)} />
+            <ToggleRow label="Grid" checked={viewport.grid} onChange={(v) => updateViewport('grid', v)} />
+            <ToggleRow label="Map Reference" checked={showPreview} onChange={onTogglePreview} />
+          </>
+        ))}
 
-        {/* Status message */}
-        {erosionState && !hasAppliedMap && (
-          <p className="side-panel__hint">
-            Simulation map ready — Apply uses eroded heightmap.
-          </p>
-        )}
-        {hasAppliedMap && (
-          <p className="side-panel__hint">
-            Map applied ({appliedSource === 'erosion' ? 'simulation' : 'noise'}).
-          </p>
-        )}
+        {section('geometry', 'Geometry', (
+          <>
+            <div className="side-panel__field">
+              <span className="side-panel__label">Terrain</span>
+              <nav className="sub-tabs" aria-label="Terrain source">
+                <button
+                  type="button"
+                  className={`sub-tabs__button ${!hasAppliedMap ? 'sub-tabs__button--active' : ''}`}
+                  onClick={onClearMap}
+                >
+                  Flat
+                </button>
+                <button
+                  type="button"
+                  className={`sub-tabs__button ${hasAppliedMap && appliedSource === 'noise' ? 'sub-tabs__button--active' : ''}`}
+                  onClick={onApply}
+                >
+                  Noise
+                </button>
+                <button
+                  type="button"
+                  className={`sub-tabs__button ${hasAppliedMap && appliedSource === 'erosion' ? 'sub-tabs__button--active' : ''}`}
+                  onClick={onApplyErosion}
+                  disabled={!erosionState}
+                  title={erosionState ? undefined : 'Run a simulation in 2D Terrain first'}
+                >
+                  Sim
+                </button>
+              </nav>
+            </div>
+            <p className="side-panel__hint">
+              Clicking Noise or Sim loads the latest map from 2D Terrain.
+            </p>
+            <ParamSlider
+              id="plane-segments"
+              label="Plane Resolution"
+              value={sceneParams.planeSegments}
+              min={4}
+              max={1024}
+              step={4}
+              onChange={(v) => updateScene('planeSegments', v)}
+            />
+            <ParamSlider
+              id="displacement-scale"
+              label="Displacement"
+              value={sceneParams.displacementScale}
+              min={0}
+              max={6}
+              step={0.1}
+              format={(v) => v.toFixed(2)}
+              onChange={(v) => updateScene('displacementScale', v)}
+            />
+          </>
+        ))}
 
-        <ParamSlider
-          id="plane-segments"
-          label="Plane Res"
-          value={sceneParams.planeSegments}
-          min={4}
-          max={1024}
-          step={4}
-          onChange={(v) => updateScene('planeSegments', v)}
-        />
+        {section('environment', 'Environment', (
+          <>
+            <ToggleRow label="Fog" checked={sceneParams.fog} onChange={(v) => updateScene('fog', v)} />
+            <PlannedRow label="Time" />
+            <PlannedRow label="Sun" />
+            <PlannedRow label="Weather" />
+            <PlannedRow label="Cloud" />
+          </>
+        ))}
 
-        <ParamSlider
-          id="noise-field-size"
-          label="Noise Res"
-          value={sceneParams.noiseFieldSize}
-          min={32}
-          max={1024}
-          step={32}
-          format={(v) => `${v}²`}
-          onChange={(v) => updateScene('noiseFieldSize', v)}
-        />
+        {section('camera', 'Camera', (
+          <>
+            <div className="side-panel__field side-panel__row">
+              <button type="button" className="side-panel__button" style={{ flex: 1 }} onClick={onResetCamera}>
+                Reset
+              </button>
+              <button type="button" className="side-panel__button" style={{ flex: 1 }} onClick={onStoreView}>
+                Store View
+              </button>
+            </div>
+            <div className="side-panel__field">
+              <button type="button" className="side-panel__button" onClick={onRecallView} disabled={!hasStoredView}>
+                Go to Stored View
+              </button>
+            </div>
+            <PlannedRow label="Journey" />
+          </>
+        ))}
 
-        <ParamSlider
-          id="displacement-scale"
-          label="Displace"
-          value={sceneParams.displacementScale}
-          min={0}
-          max={6}
-          step={0.1}
-          format={(v) => v.toFixed(2)}
-          onChange={(v) => updateScene('displacementScale', v)}
-        />
-
-        <div className="side-panel__field">
-          <div className="side-panel__row">
-            <span className="side-panel__label">Fog</span>
-            <label className="side-panel__toggle">
-              <input
-                type="checkbox"
-                checked={sceneParams.fog}
-                onChange={(e) => updateScene('fog', e.target.checked)}
-              />
-              <span className="side-panel__toggle-track" />
-            </label>
-          </div>
-        </div>
-
-        <div className="side-panel__field side-panel__row">
-          <button type="button" className="side-panel__button" style={{ flex: 1 }} onClick={onTogglePreview}>
-            {showPreview ? 'Hide Map' : 'Show Map'}
-          </button>
-          {erosionState ? (
-            <button type="button" className="side-panel__button side-panel__button--accent" style={{ flex: 1 }} onClick={onApplyErosion}>
-              Apply Sim
-            </button>
-          ) : (
-            <button type="button" className="side-panel__button side-panel__button--accent" style={{ flex: 1 }} onClick={onApply}>
-              Apply Noise
-            </button>
-          )}
-        </div>
-
-        {hasAppliedMap && (
-          <div className="side-panel__field">
-            <button type="button" className="side-panel__button" onClick={onClearMap}>
-              Clear Map
-            </button>
-          </div>
-        )}
+        {section('world', 'World', (
+          <>
+            <PlannedRow label="Vegetation" />
+            <PlannedRow label="Settlement" />
+          </>
+        ))}
       </aside>
     )
   }
 
   // ═══════════════════════════════════════
-  // ── 2D view panel with sub-tabs ──
+  // 2D Terrain — generate, simulate, edit
   // ═══════════════════════════════════════
+  const simulationVisible = subTab === 'simulation'
+
   return (
-    <aside className="side-panel" aria-label="2D controls">
-      {/* ── Sub-tab switcher ── */}
-      <nav className="sub-tabs" aria-label="2D sub-view">
+    <aside className="side-panel" aria-label="2D terrain controls">
+      <nav className="sub-tabs" aria-label="2D canvas">
         <button
           type="button"
           className={`sub-tabs__button ${subTab === 'noise' ? 'sub-tabs__button--active' : ''}`}
@@ -261,14 +393,8 @@ export default function SidePanel({
         </button>
       </nav>
 
-      {/* ───────────────────────────────── */}
-      {/* ── Noise sub-tab ──               */}
-      {/* ───────────────────────────────── */}
-      {subTab === 'noise' && (
+      {!simulationVisible && section('layers', 'Layers', (
         <>
-          <h2 className="side-panel__title">Noise</h2>
-
-          {/* ── Layer list ── */}
           <div className="layer-list">
             {layers.map((layer, idx) => {
               const isExpanded = expandedLayer === layer.id
@@ -283,7 +409,6 @@ export default function SidePanel({
                   key={layer.id}
                   className={`layer-card ${isExpanded ? 'layer-card--expanded' : ''}`}
                 >
-                  {/* Header */}
                   <div className="layer-card__header">
                     <label className="side-panel__toggle layer-card__vis">
                       <input
@@ -311,7 +436,6 @@ export default function SidePanel({
                     </div>
                   </div>
 
-                  {/* Expanded body */}
                   {isExpanded && (
                     <div className="layer-card__body">
                       {idx > 0 && (
@@ -329,7 +453,7 @@ export default function SidePanel({
 
                       <div className="side-panel__section">Type</div>
                       <div className="side-panel__field">
-                        <label className="side-panel__label" htmlFor={`type-${layer.id}`}>Algorithm</label>
+                        <label className="side-panel__label" htmlFor={`type-${layer.id}`}>Noise Type</label>
                         <select id={`type-${layer.id}`} className="side-panel__select" value={layer.params.type} onChange={(e) => updateLayerParams(layer.id, { type: e.target.value as NoiseParams['type'] })}>
                           {NOISE_GROUPS.map((g) => (
                             <optgroup key={g} label={g}>
@@ -445,52 +569,39 @@ export default function SidePanel({
               + Add Layer
             </button>
           </div>
-
-          {/* Global output */}
-          <div className="side-panel__section">Output</div>
-
-          <div className="side-panel__field">
-            <label className="side-panel__label" htmlFor="noise-color">Color</label>
-            <select
-              id="noise-color"
-              className="side-panel__select"
-              value={layers[0]?.params.colorMode ?? 'grayscale'}
-              onChange={(e) => {
-                const mode = e.target.value as NoiseParams['colorMode']
-                onLayersChange(layers.map((l) => ({ ...l, params: { ...l.params, colorMode: mode } })))
-              }}
-            >
-              {COLOR_MODES.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          </div>
-
-          <ParamSlider
-            id="noise-resolution"
-            label="Resolution"
-            value={layers[0]?.params.resolution ?? 512}
-            min={64}
-            max={1024}
-            step={64}
-            format={(v) => `${v}px`}
-            onChange={(v) => onLayersChange(layers.map((l) => ({ ...l, params: { ...l.params, resolution: v } })))}
-          />
         </>
-      )}
+      ))}
 
-      {/* ───────────────────────────────── */}
-      {/* ── Simulation sub-tab ──          */}
-      {/* ───────────────────────────────── */}
-      {subTab === 'simulation' && (
+      {!simulationVisible && section('noiseOutput', 'Heightmap Output', (
         <>
-          <h2 className="side-panel__title">Hydraulic Erosion</h2>
-
+          <ParamSlider
+            id="noise-field-size"
+            label="Heightmap Resolution"
+            value={sceneParams.noiseFieldSize}
+            min={32}
+            max={1024}
+            step={32}
+            format={(v) => `${v}²`}
+            onChange={(v) => updateScene('noiseFieldSize', v)}
+          />
           <p className="side-panel__hint">
-            Runs droplet erosion over the current noise heightmap. Progress is kept when you switch views.
+            Pixel size of the noise heightmap sent to 3D.
+            {hasAppliedMap && appliedSource === 'noise' ? ' Send again to update 3D.' : ''}
+          </p>
+          <div className="side-panel__field">
+            <button type="button" className="side-panel__button side-panel__button--accent" onClick={onApply}>
+              Send Noise to 3D
+            </button>
+          </div>
+        </>
+      ))}
+
+      {simulationVisible && section('simulation', 'Hydraulic Erosion', (
+        <>
+          <p className="side-panel__hint">
+            Erodes the current noise layers. Progress is kept when you switch views.
           </p>
 
-          {/* Control buttons */}
           <div className="side-panel__field side-panel__row">
             {!erosionRunning ? (
               <button
@@ -522,18 +633,6 @@ export default function SidePanel({
             </button>
           </div>
 
-          <div className="side-panel__field">
-            <button
-              type="button"
-              className="side-panel__button side-panel__button--accent"
-              onClick={onApplyErosion}
-              disabled={!erosionState}
-            >
-              Apply to Plane
-            </button>
-          </div>
-
-          {/* Stats */}
           {erosionState && (
             <div className="side-panel__field">
               <div className="side-panel__row">
@@ -551,35 +650,82 @@ export default function SidePanel({
             </div>
           )}
 
-          {/* Droplet params */}
+          <div className="side-panel__field">
+            <button
+              type="button"
+              className="side-panel__button side-panel__button--accent"
+              onClick={onApplyErosion}
+              disabled={!erosionState}
+            >
+              Send Simulation to 3D
+            </button>
+          </div>
+
+          <div className="side-panel__section">Rain</div>
           <ParamSlider id="ero-droplets" label="Drops / Frame" value={erosionParams.dropletsPerStep} min={50} max={2000} step={50} onChange={(v) => updateErosion('dropletsPerStep', v)} />
           <ParamSlider id="ero-lifetime" label="Lifetime" value={erosionParams.maxLifetime} min={8} max={128} step={4} onChange={(v) => updateErosion('maxLifetime', v)} />
+          <ParamSlider id="ero-water" label="Water" value={erosionParams.initialWater} min={0.1} max={3} step={0.1} format={(v) => v.toFixed(1)} onChange={(v) => updateErosion('initialWater', v)} />
+          <ParamSlider id="ero-evaporation" label="Evaporation" value={erosionParams.evaporationRate} min={0} max={0.1} step={0.005} format={(v) => v.toFixed(3)} onChange={(v) => updateErosion('evaporationRate', v)} />
 
-          {/* Erosion params */}
-          <ParamSlider id="ero-friction" label="Inertia" value={1 - erosionParams.friction} min={0.7} max={1} step={0.01} format={(v) => v.toFixed(2)} onChange={(v) => updateErosion('friction', 1 - v)} />
+          <div className="side-panel__section">Sediment</div>
           <ParamSlider id="ero-capacity" label="Capacity" value={erosionParams.sedimentCapacity} min={0.5} max={20} step={0.5} format={(v) => v.toFixed(1)} onChange={(v) => updateErosion('sedimentCapacity', v)} />
-          <ParamSlider id="ero-minspeed" label="Min Slope" value={erosionParams.minSpeed} min={0.001} max={0.1} step={0.001} format={(v) => v.toFixed(3)} onChange={(v) => updateErosion('minSpeed', v)} />
           <ParamSlider id="ero-deposit" label="Deposition" value={erosionParams.depositRate} min={0.01} max={1} step={0.01} format={(v) => v.toFixed(2)} onChange={(v) => updateErosion('depositRate', v)} />
           <ParamSlider id="ero-erode" label="Erosion" value={erosionParams.erodeRate} min={0.01} max={1} step={0.01} format={(v) => v.toFixed(2)} onChange={(v) => updateErosion('erodeRate', v)} />
-          <ParamSlider id="ero-evaporation" label="Evaporation" value={erosionParams.evaporationRate} min={0} max={0.1} step={0.005} format={(v) => v.toFixed(3)} onChange={(v) => updateErosion('evaporationRate', v)} />
-          <ParamSlider id="ero-gravity" label="Gravity" value={erosionParams.gravity} min={1} max={20} step={0.5} format={(v) => v.toFixed(1)} onChange={(v) => updateErosion('gravity', v)} />
-          <ParamSlider id="ero-water" label="Water" value={erosionParams.initialWater} min={0.1} max={3} step={0.1} format={(v) => v.toFixed(1)} onChange={(v) => updateErosion('initialWater', v)} />
           <ParamSlider id="ero-brush" label="Brush Radius" value={erosionParams.brushRadius} min={1} max={8} step={1} onChange={(v) => updateErosion('brushRadius', v)} />
 
-          {/* Map size */}
-          <div className="side-panel__section">Map</div>
+          <div className="side-panel__section">Flow</div>
+          <ParamSlider id="ero-friction" label="Inertia" value={1 - erosionParams.friction} min={0.7} max={1} step={0.01} format={(v) => v.toFixed(2)} onChange={(v) => updateErosion('friction', 1 - v)} />
+          <ParamSlider id="ero-gravity" label="Gravity" value={erosionParams.gravity} min={1} max={20} step={0.5} format={(v) => v.toFixed(1)} onChange={(v) => updateErosion('gravity', v)} />
+          <ParamSlider id="ero-minspeed" label="Min Slope" value={erosionParams.minSpeed} min={0.001} max={0.1} step={0.001} format={(v) => v.toFixed(3)} onChange={(v) => updateErosion('minSpeed', v)} />
           <ParamSlider id="ero-mapsize" label="Map Size" value={erosionParams.mapSize} min={64} max={1024} step={64} format={(v) => `${v}px`} onChange={(v) => updateErosion('mapSize', v)} />
-
-          {/* Display */}
-          <div className="side-panel__section">Display</div>
-          <div className="side-panel__field">
-            <label className="side-panel__label" htmlFor="ero-color">Color</label>
-            <select id="ero-color" className="side-panel__select" value={erosionColorMode} onChange={(e) => onErosionColorModeChange(e.target.value as ColorMode)}>
-              {COLOR_MODES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </div>
         </>
-      )}
+      ))}
+
+      {section('analysis', 'Analysis', (
+        <>
+          <div className="side-panel__row">
+            <span className="side-panel__label">Height</span>
+            <span className="side-panel__badge side-panel__badge--active">active</span>
+          </div>
+          <PlannedRow label="Slope" />
+          <PlannedRow label="Water" />
+          <PlannedRow label="Sediment" />
+
+          <div className="side-panel__field">
+            <label className="side-panel__label" htmlFor="analysis-color">Height Color</label>
+            {simulationVisible ? (
+              <select id="analysis-color" className="side-panel__select" value={erosionColorMode} onChange={(e) => onErosionColorModeChange(e.target.value as ColorMode)}>
+                {COLOR_MODES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            ) : (
+              <select
+                id="analysis-color"
+                className="side-panel__select"
+                value={layers[0]?.params.colorMode ?? 'grayscale'}
+                onChange={(e) => {
+                  const mode = e.target.value as NoiseParams['colorMode']
+                  onLayersChange(layers.map((l) => ({ ...l, params: { ...l.params, colorMode: mode } })))
+                }}
+              >
+                {COLOR_MODES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            )}
+          </div>
+
+          {!simulationVisible && (
+            <ParamSlider
+              id="noise-resolution"
+              label="Preview Resolution"
+              value={layers[0]?.params.resolution ?? 512}
+              min={64}
+              max={1024}
+              step={64}
+              format={(v) => `${v}px`}
+              onChange={(v) => onLayersChange(layers.map((l) => ({ ...l, params: { ...l.params, resolution: v } })))}
+            />
+          )}
+        </>
+      ))}
     </aside>
   )
 }

@@ -5,6 +5,7 @@ import {
   type ErosionParams,
   type ErosionState,
 } from '../lib/erosion'
+import PanZoomViewport from './PanZoomViewport'
 import './NoiseCanvas.css'
 
 type ErosionCanvasProps = {
@@ -94,11 +95,13 @@ export default function ErosionCanvas({
   return (
     <div ref={containerRef} className="noise-canvas">
       {erosionState ? (
-        <canvas
-          ref={canvasRef}
-          className="noise-canvas__surface"
-          aria-label="Erosion simulation"
-        />
+        <PanZoomViewport label="Current Height Map">
+          <canvas
+            ref={canvasRef}
+            className="noise-canvas__surface"
+            aria-label="Erosion simulation"
+          />
+        </PanZoomViewport>
       ) : (
         <div className="noise-canvas__empty">
           <p>Generate a base heightmap first, then start the simulation.</p>

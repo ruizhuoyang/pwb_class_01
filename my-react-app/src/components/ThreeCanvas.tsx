@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useImperativeHandle, useRef, type Ref } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import './ThreeCanvas.css'
@@ -10,20 +10,75 @@ export type SceneParams = {
   fog: boolean
 }
 
+export type ViewportParams = {
+  solid: boolean
+  wireframe: boolean
+  axes: boolean
+  grid: boolean
+}
+
+export type CameraView = {
+  position: [number, number, number]
+  target: [number, number, number]
+}
+
+export type ThreeCanvasHandle = {
+  resetView: () => void
+  getView: () => CameraView | null
+  setView: (view: CameraView) => void
+}
+
+const HOME_VIEW: CameraView = { position: [0, 6, 8], target: [0, 0, 0] }
+
 type ThreeCanvasProps = {
   sceneParams: SceneParams
+  viewport: ViewportParams
   /** Offscreen canvas painted with the color noise map. */
   colorMap: HTMLCanvasElement | null
-  /** Raw 0..1 heightfield matching noiseFieldSize × noiseFieldSize. */
+  /** Raw 0..1 square heightfield; its size is derived from the array length. */
   heightfield: Float32Array | null
+  ref?: Ref<ThreeCanvasHandle>
 }
 
 export default function ThreeCanvas({
   sceneParams,
+  viewport,
   colorMap,
   heightfield,
+  ref,
 }: ThreeCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null)
+  const controlsRef = useRef<OrbitControls | null>(null)
+  const viewportRef = useRef(viewport)
+
+  useEffect(() => {
+    viewportRef.current = viewport
+  }, [viewport])
+
+  useImperativeHandle(ref, () => {
+    const applyView = (view: CameraView) => {
+      const camera = cameraRef.current
+      const controls = controlsRef.current
+      if (!camera || !controls) return
+      camera.position.set(...view.position)
+      controls.target.set(...view.target)
+      controls.update()
+    }
+    return {
+      resetView: () => applyView(HOME_VIEW),
+      setView: applyView,
+      getView: () => {
+        const camera = cameraRef.current
+        const controls = controlsRef.current
+        if (!camera || !controls) return null
+        return {
+          position: camera.position.toArray() as CameraView['position'],
+          target: controls.target.toArray() as CameraView['target'],
+        }
+      },
+    }
+  }, [])
 
   // Keep mutable refs so the render loop can read latest values
   // without re-mounting the entire Three.js scene.
@@ -67,7 +122,7 @@ export default function ThreeCanvas({
       0.1,
       200,
     )
-    camera.position.set(0, 6, 8)
+    camera.position.set(...HOME_VIEW.position)
 
     const renderer = new THREE.WebGLRenderer({ antialias: true })
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
@@ -76,7 +131,9 @@ export default function ThreeCanvas({
 
     const controls = new OrbitControls(camera, renderer.domElement)
     controls.enableDamping = true
-    controls.target.set(0, 0, 0)
+    controls.target.set(...HOME_VIEW.target)
+    cameraRef.current = camera
+    controlsRef.current = controls
 
     // ── Lights ──
     scene.add(new THREE.AmbientLight(0xffffff, 0.5))
@@ -89,6 +146,10 @@ export default function ThreeCanvas({
     grid.position.y = -0.01
     scene.add(grid)
 
+    const axes = new THREE.AxesHelper(6)
+    axes.position.y = 0.02
+    scene.add(axes)
+
     // ── Plane mesh ──
     let segments = sceneRef.current.planeSegments
     let geometry = new THREE.PlaneGeometry(10, 10, segments, segments)
@@ -98,10 +159,24 @@ export default function ThreeCanvas({
       roughness: 0.6,
       flatShading: true,
       side: THREE.DoubleSide,
+      // Pushes the solid surface back so the wireframe overlay doesn't z-fight.
+      polygonOffset: true,
+      polygonOffsetFactor: 1,
+      polygonOffsetUnits: 1,
     })
     const plane = new THREE.Mesh(geometry, material)
     plane.rotation.x = -Math.PI / 2
     scene.add(plane)
+
+    const wireMaterial = new THREE.MeshBasicMaterial({
+      color: 0x3ecf8e,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.35,
+    })
+    const wire = new THREE.Mesh(geometry, wireMaterial)
+    wire.rotation.x = -Math.PI / 2
+    scene.add(wire)
 
     let colorTexture: THREE.CanvasTexture | null = null
     let currentMapVersion = -1
@@ -114,6 +189,7 @@ export default function ThreeCanvas({
       const old = geometry
       geometry = new THREE.PlaneGeometry(10, 10, segments, segments)
       plane.geometry = geometry
+      wire.geometry = geometry
       old.dispose()
 
       // Re-apply heightfield to new geometry
@@ -125,7 +201,7 @@ export default function ThreeCanvas({
       const scale = sceneRef.current.displacementScale
       const positions = geometry.attributes.position
       const count = positions.count
-      const fieldSize = sceneRef.current.noiseFieldSize
+      const fieldSize = hf ? Math.round(Math.sqrt(hf.length)) : 0
       const segs = segments + 1
 
       for (let i = 0; i < count; i++) {
@@ -198,6 +274,13 @@ export default function ThreeCanvas({
         applyHeightfield()
       }
 
+      const vp = viewportRef.current
+      plane.visible = vp.solid
+      wire.visible = vp.wireframe
+      wireMaterial.opacity = vp.solid ? 0.35 : 0.9
+      axes.visible = vp.axes
+      grid.visible = vp.grid
+
       controls.update()
       renderer.render(scene, camera)
     }
@@ -219,8 +302,12 @@ export default function ThreeCanvas({
       cancelAnimationFrame(frameId)
       ro.disconnect()
       controls.dispose()
+      cameraRef.current = null
+      controlsRef.current = null
       geometry.dispose()
       material.dispose()
+      wireMaterial.dispose()
+      axes.dispose()
       colorTexture?.dispose()
       renderer.dispose()
       container.removeChild(renderer.domElement)
