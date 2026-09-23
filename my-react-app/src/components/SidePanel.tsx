@@ -19,6 +19,19 @@ import {
   type ShapingParams,
 } from '../lib/noise'
 import type { ErosionParams, ErosionState } from '../lib/erosion'
+import {
+  WEATHER_PRESETS,
+  WEATHERS,
+  formatTimeOfDay,
+  type EnvironmentParams,
+} from '../lib/environment'
+import type { MapOffset } from '../lib/generateNoiseTexture'
+import {
+  DEFAULT_GRADIENT,
+  gradientCss,
+  type GradientStop,
+  type TerrainColorMode,
+} from '../lib/heightGradient'
 import './SidePanel.css'
 
 export type SubTab = 'noise' | 'simulation'
@@ -58,6 +71,8 @@ type SidePanelProps = {
   onLayersChange: (layers: NoiseLayer[]) => void
   sceneParams: SceneParams
   onSceneParamsChange: (params: SceneParams) => void
+  environment: EnvironmentParams
+  onEnvironmentChange: (params: EnvironmentParams) => void
   viewport: ViewportParams
   onViewportChange: (params: ViewportParams) => void
   onResetCamera: () => void
@@ -68,6 +83,15 @@ type SidePanelProps = {
   appliedSource: 'noise' | 'erosion' | null
   onTogglePreview: () => void
   showPreview: boolean
+  terrainColorMode: TerrainColorMode
+  onTerrainColorModeChange: (mode: TerrainColorMode) => void
+  gradientStops: GradientStop[]
+  onGradientStopsChange: (stops: GradientStop[]) => void
+  hasHeightfield: boolean
+  heightfieldSize: number | null
+  mapOffset: MapOffset
+  onResetOffset: () => void
+  onLoadPreset: () => void
   onApply: () => void
   onClearMap: () => void
   // Simulation props
@@ -82,6 +106,8 @@ type SidePanelProps = {
   onStopErosion: () => void
   onResetErosion: () => void
   onApplyErosion: () => void
+  liveSync: boolean
+  onLiveSyncChange: (enabled: boolean) => void
 }
 
 type AccordionSectionProps = {
@@ -114,7 +140,7 @@ function AccordionSection({ id, label, open, onToggle, children }: AccordionSect
   )
 }
 
-function ToggleRow({
+export function ToggleRow({
   label,
   checked,
   onChange,
@@ -151,6 +177,8 @@ export default function SidePanel({
   onLayersChange,
   sceneParams,
   onSceneParamsChange,
+  environment,
+  onEnvironmentChange,
   viewport,
   onViewportChange,
   onResetCamera,
@@ -161,6 +189,15 @@ export default function SidePanel({
   appliedSource,
   onTogglePreview,
   showPreview,
+  terrainColorMode,
+  onTerrainColorModeChange,
+  gradientStops,
+  onGradientStopsChange,
+  hasHeightfield,
+  heightfieldSize,
+  mapOffset,
+  onResetOffset,
+  onLoadPreset,
   onApply,
   onClearMap,
   erosionParams,
@@ -174,6 +211,8 @@ export default function SidePanel({
   onStopErosion,
   onResetErosion,
   onApplyErosion,
+  liveSync,
+  onLiveSyncChange,
 }: SidePanelProps) {
   const [expandedLayer, setExpandedLayer] = useState<string | null>(
     layers[0]?.id ?? null,
@@ -194,10 +233,18 @@ export default function SidePanel({
     value: SceneParams[Key],
   ) => onSceneParamsChange({ ...sceneParams, [key]: value })
 
+  const updateEnvironment = <Key extends keyof EnvironmentParams>(
+    key: Key,
+    value: EnvironmentParams[Key],
+  ) => onEnvironmentChange({ ...environment, [key]: value })
+
   const updateViewport = <Key extends keyof ViewportParams>(
     key: Key,
     value: ViewportParams[Key],
   ) => onViewportChange({ ...viewport, [key]: value })
+
+  const updateStop = (index: number, patch: Partial<GradientStop>) =>
+    onGradientStopsChange(gradientStops.map((s, i) => (i === index ? { ...s, ...patch } : s)))
 
   const updateErosion = <Key extends keyof ErosionParams>(
     key: Key,
@@ -268,10 +315,55 @@ export default function SidePanel({
         {section('display', 'Display', (
           <>
             <ToggleRow label="Solid" checked={viewport.solid} onChange={(v) => updateViewport('solid', v)} />
-            <ToggleRow label="Wireframe" checked={viewport.wireframe} onChange={(v) => updateViewport('wireframe', v)} />
+            <ToggleRow label="Wireframe (W)" checked={viewport.wireframe} onChange={(v) => updateViewport('wireframe', v)} />
             <ToggleRow label="Axis" checked={viewport.axes} onChange={(v) => updateViewport('axes', v)} />
             <ToggleRow label="Grid" checked={viewport.grid} onChange={(v) => updateViewport('grid', v)} />
             <ToggleRow label="Map Reference" checked={showPreview} onChange={onTogglePreview} />
+            <div className="side-panel__field">
+              <label className="side-panel__label" htmlFor="terrain-color-mode">Color Mode</label>
+              <select
+                id="terrain-color-mode"
+                className="side-panel__select"
+                value={terrainColorMode}
+                onChange={(e) => onTerrainColorModeChange(e.target.value as TerrainColorMode)}
+              >
+                <option value="default">Default</option>
+                <option value="height">Height Gradient</option>
+              </select>
+            </div>
+            {terrainColorMode === 'height' && (
+              <div className="gradient-editor">
+                <div className="gradient-editor__bar" style={{ background: gradientCss(gradientStops) }} />
+                {gradientStops.map((stop, i) => (
+                  <div key={i} className="gradient-editor__stop">
+                    <input
+                      type="color"
+                      className="gradient-editor__color"
+                      aria-label={`Stop ${i + 1} color`}
+                      value={stop.color}
+                      onChange={(e) => updateStop(i, { color: e.target.value })}
+                    />
+                    <input
+                      type="range"
+                      className="gradient-editor__range"
+                      aria-label={`Stop ${i + 1} position`}
+                      min={0}
+                      max={1}
+                      step={0.01}
+                      value={stop.position}
+                      onChange={(e) => updateStop(i, { position: Number(e.target.value) })}
+                    />
+                    <span className="side-panel__value gradient-editor__value">{stop.position.toFixed(2)}</span>
+                  </div>
+                ))}
+                <button type="button" className="side-panel__button" onClick={() => onGradientStopsChange(DEFAULT_GRADIENT)}>
+                  Reset Gradient
+                </button>
+                {!hasHeightfield && (
+                  <p className="side-panel__hint">Load a Noise or Sim terrain to see the gradient.</p>
+                )}
+              </div>
+            )}
           </>
         ))}
 
@@ -308,6 +400,18 @@ export default function SidePanel({
             <p className="side-panel__hint">
               Clicking Noise or Sim loads the latest map from 2D Terrain.
             </p>
+            {erosionState && (
+              <>
+                <ToggleRow label="Live Sync to 3D" checked={liveSync} onChange={onLiveSyncChange} />
+                <button
+                  type="button"
+                  className="side-panel__button side-panel__button--accent"
+                  onClick={erosionRunning ? onStopErosion : onStartErosion}
+                >
+                  {erosionRunning ? '■ Stop Erosion' : '▶ Run Erosion'}
+                </button>
+              </>
+            )}
             <ParamSlider
               id="plane-segments"
               label="Plane Resolution"
@@ -327,16 +431,68 @@ export default function SidePanel({
               format={(v) => v.toFixed(2)}
               onChange={(v) => updateScene('displacementScale', v)}
             />
+            {heightfieldSize !== null && (
+              <p className="side-panel__hint">
+                {sceneParams.planeSegments < heightfieldSize
+                  ? `Plane ${sceneParams.planeSegments} < map ${heightfieldSize}² — terrain detail is lost. Raise Plane Resolution to ${heightfieldSize}.`
+                  : `Plane ${sceneParams.planeSegments} ≥ map ${heightfieldSize}² — every height sample is shown.`}
+              </p>
+            )}
+            {hasAppliedMap && appliedSource === 'noise' && (
+              <div className="side-panel__row">
+                <span className="side-panel__hint">Arrow keys scroll · Shift = fast</span>
+                <button type="button" className="side-panel__button" onClick={onResetOffset}>
+                  Recenter
+                </button>
+              </div>
+            )}
           </>
         ))}
 
         {section('environment', 'Environment', (
           <>
             <ToggleRow label="Fog" checked={sceneParams.fog} onChange={(v) => updateScene('fog', v)} />
-            <PlannedRow label="Time" />
-            <PlannedRow label="Sun" />
-            <PlannedRow label="Weather" />
-            <PlannedRow label="Cloud" />
+
+            <ParamSlider
+              id="env-time"
+              label="Time of Day"
+              value={environment.timeOfDay}
+              min={0}
+              max={24}
+              step={0.25}
+              format={formatTimeOfDay}
+              onChange={(v) => updateEnvironment('timeOfDay', v % 24)}
+            />
+            <button
+              type="button"
+              className={`side-panel__button ${environment.dayCycle ? '' : 'side-panel__button--accent'}`}
+              onClick={() => updateEnvironment('dayCycle', !environment.dayCycle)}
+            >
+              {environment.dayCycle ? '■ Pause Day Cycle' : '▶ Play Day Cycle'}
+            </button>
+
+            <ParamSlider id="env-sun-azimuth" label="Sun Direction" value={environment.sunAzimuth} min={0} max={360} step={5} format={(v) => `${v}°`} onChange={(v) => updateEnvironment('sunAzimuth', v)} />
+            <ParamSlider id="env-sun-intensity" label="Sun Intensity" value={environment.sunIntensity} min={0} max={2} step={0.05} format={(v) => v.toFixed(2)} onChange={(v) => updateEnvironment('sunIntensity', v)} />
+
+            <span className="side-panel__label">Weather</span>
+            <nav className="sub-tabs" aria-label="Weather">
+              {WEATHERS.map((w) => (
+                <button
+                  key={w}
+                  type="button"
+                  className={`sub-tabs__button ${environment.weather === w ? 'sub-tabs__button--active' : ''}`}
+                  aria-pressed={environment.weather === w}
+                  onClick={() => onEnvironmentChange({ ...environment, weather: w, cloudCover: WEATHER_PRESETS[w].cloudCover })}
+                >
+                  {WEATHER_PRESETS[w].label}
+                </button>
+              ))}
+            </nav>
+
+            <ToggleRow label="Clouds" checked={environment.clouds} onChange={(v) => updateEnvironment('clouds', v)} />
+            {environment.clouds && (
+              <ParamSlider id="env-cloud-cover" label="Cloud Cover" value={environment.cloudCover} min={0} max={1} step={0.05} format={(v) => `${Math.round(v * 100)}%`} onChange={(v) => updateEnvironment('cloudCover', v)} />
+            )}
           </>
         ))}
 
@@ -568,6 +724,9 @@ export default function SidePanel({
             <button type="button" className="side-panel__button side-panel__button--accent" onClick={addLayer}>
               + Add Layer
             </button>
+            <button type="button" className="side-panel__button" onClick={onLoadPreset}>
+              Load Calibrated Terrain
+            </button>
           </div>
         </>
       ))}
@@ -588,6 +747,23 @@ export default function SidePanel({
             Pixel size of the noise heightmap sent to 3D.
             {hasAppliedMap && appliedSource === 'noise' ? ' Send again to update 3D.' : ''}
           </p>
+          <div className="side-panel__row">
+            <span className="side-panel__label">Map Offset</span>
+            <span className="side-panel__value">
+              {mapOffset.x.toFixed(2)}, {mapOffset.y.toFixed(2)}
+            </span>
+          </div>
+          <div className="side-panel__row">
+            <span className="side-panel__hint">Arrow keys scroll · Shift = fast</span>
+            <button
+              type="button"
+              className="side-panel__button"
+              onClick={onResetOffset}
+              disabled={mapOffset.x === 0 && mapOffset.y === 0}
+            >
+              Recenter
+            </button>
+          </div>
           <div className="side-panel__field">
             <button type="button" className="side-panel__button side-panel__button--accent" onClick={onApply}>
               Send Noise to 3D
@@ -660,6 +836,7 @@ export default function SidePanel({
               Send Simulation to 3D
             </button>
           </div>
+          <ToggleRow label="Live Sync to 3D" checked={liveSync} onChange={onLiveSyncChange} />
 
           <div className="side-panel__section">Rain</div>
           <ParamSlider id="ero-droplets" label="Drops / Frame" value={erosionParams.dropletsPerStep} min={50} max={2000} step={50} onChange={(v) => updateErosion('dropletsPerStep', v)} />

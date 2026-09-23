@@ -13,6 +13,7 @@
   font-size: 0.6875rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  white-space: nowrap;
   color: var(--text-muted);
   background: var(--panel-bg);
   border: none;

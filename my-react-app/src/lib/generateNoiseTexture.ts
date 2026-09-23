@@ -4,7 +4,13 @@ import {
   colorForValue,
   createNoiseSampler,
   type NoiseLayer,
+  type NoiseSampler,
 } from './noise'
+
+/** Pan of the sampled window, in map widths (1 = one full map to the right/down). */
+export type MapOffset = { x: number; y: number }
+
+export const ZERO_OFFSET: MapOffset = { x: 0, y: 0 }
 
 /**
  * Renders multi-layer noise into an offscreen canvas for 3D texture use.
@@ -12,30 +18,10 @@ import {
 export function generateNoiseTexture(
   layers: NoiseLayer[],
   size: number,
+  offset: MapOffset = ZERO_OFFSET,
 ): HTMLCanvasElement {
-  const canvas = document.createElement('canvas')
-  canvas.width = size
-  canvas.height = size
-
-  const ctx = canvas.getContext('2d')!
-  const image = ctx.createImageData(size, size)
-  const px = image.data
   const colorMode = layers[0]?.params.colorMode ?? 'grayscale'
-
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const v = compositeLayers(layers, x, y, size)
-      const [r, g, b] = colorForValue(colorMode, v)
-      const offset = (y * size + x) * 4
-      px[offset] = r
-      px[offset + 1] = g
-      px[offset + 2] = b
-      px[offset + 3] = 255
-    }
-  }
-
-  ctx.putImageData(image, 0, 0)
-  return canvas
+  return heightmapToTexture(generateHeightfield(layers, size, offset), size, colorMode)
 }
 
 /**
@@ -44,11 +30,13 @@ export function generateNoiseTexture(
 export function generateHeightfield(
   layers: NoiseLayer[],
   size: number,
+  offset: MapOffset = ZERO_OFFSET,
 ): Float32Array {
+  const active = prepareLayers(layers)
   const data = new Float32Array(size * size)
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      data[y * size + x] = compositeLayers(layers, x, y, size)
+      data[y * size + x] = compositeLayers(active, x / size + offset.x, y / size + offset.y)
     }
   }
   return data
@@ -84,28 +72,29 @@ export function heightmapToTexture(
   return canvas
 }
 
-function compositeLayers(
-  layers: NoiseLayer[],
-  x: number,
-  y: number,
-  size: number,
-): number {
+type ActiveLayer = { layer: NoiseLayer; sampler: NoiseSampler }
+
+/** Builds each visible layer's sampler once, instead of once per pixel. */
+export function prepareLayers(layers: NoiseLayer[]): ActiveLayer[] {
+  return layers
+    .filter((l) => l.visible)
+    .map((layer) => ({ layer, sampler: createNoiseSampler(layer.params) }))
+}
+
+/** Composites layers at map coordinates `(u, v)`, where one map width = 1. */
+export function compositeLayers(active: ActiveLayer[], u: number, v: number): number {
   let result = 0
   let first = true
 
-  for (const layer of layers) {
-    if (!layer.visible) continue
-    const sampler = createNoiseSampler(layer.params)
-    const nx = (x / size) * layer.params.scale
-    const ny = (y / size) * layer.params.scale
-    let v = sampler.sample(nx, ny)
-    v = applyShaping(v, layer.shaping)
+  for (const { layer, sampler } of active) {
+    let value = sampler.sample(u * layer.params.scale, v * layer.params.scale)
+    value = applyShaping(value, layer.shaping)
 
     if (first) {
-      result = v * layer.opacity
+      result = value * layer.opacity
       first = false
     } else {
-      result = blendValues(result, v, layer.blendMode, layer.opacity)
+      result = blendValues(result, value, layer.blendMode, layer.opacity)
     }
   }
 

@@ -1,49 +1,26 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { colorForValue, type ColorMode } from '../lib/noise'
-import {
-  stepErosion,
-  type ErosionParams,
-  type ErosionState,
-} from '../lib/erosion'
+import type { ErosionState } from '../lib/erosion'
 import PanZoomViewport from './PanZoomViewport'
 import './NoiseCanvas.css'
 
 type ErosionCanvasProps = {
   erosionState: ErosionState | null
-  erosionParams: ErosionParams
-  running: boolean
   colorMode: ColorMode
-  onStateUpdate: (state: ErosionState) => void
 }
 
-export default function ErosionCanvas({
-  erosionState,
-  erosionParams,
-  running,
-  colorMode,
-  onStateUpdate,
-}: ErosionCanvasProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
+/** Displays the erosion heightmap; the simulation loop itself runs in App. */
+export default function ErosionCanvas({ erosionState, colorMode }: ErosionCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const stateRef = useRef(erosionState)
-  const paramsRef = useRef(erosionParams)
-  const runningRef = useRef(running)
-  const colorRef = useRef(colorMode)
 
-  useEffect(() => { stateRef.current = erosionState }, [erosionState])
-  useEffect(() => { paramsRef.current = erosionParams }, [erosionParams])
-  useEffect(() => { runningRef.current = running }, [running])
-  useEffect(() => { colorRef.current = colorMode }, [colorMode])
-
-  const paint = useCallback(() => {
+  useEffect(() => {
     const canvas = canvasRef.current
-    const state = stateRef.current
-    if (!canvas || !state) return
+    if (!canvas || !erosionState) return
 
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const size = paramsRef.current.mapSize
+    const size = Math.round(Math.sqrt(erosionState.heightmap.length))
     if (canvas.width !== size || canvas.height !== size) {
       canvas.width = size
       canvas.height = size
@@ -51,11 +28,10 @@ export default function ErosionCanvas({
 
     const image = ctx.createImageData(size, size)
     const px = image.data
-    const mode = colorRef.current
 
-    for (let i = 0; i < state.heightmap.length; i++) {
-      const v = Math.min(1, Math.max(0, state.heightmap[i]))
-      const [r, g, b] = colorForValue(mode, v)
+    for (let i = 0; i < erosionState.heightmap.length; i++) {
+      const v = Math.min(1, Math.max(0, erosionState.heightmap[i]))
+      const [r, g, b] = colorForValue(colorMode, v)
       const off = i * 4
       px[off] = r
       px[off + 1] = g
@@ -64,36 +40,10 @@ export default function ErosionCanvas({
     }
 
     ctx.putImageData(image, 0, 0)
-  }, [])
-
-  // Paint whenever state changes (including from outside).
-  useEffect(() => {
-    paint()
-  }, [erosionState, colorMode, paint])
-
-  // Simulation loop.
-  useEffect(() => {
-    if (!running || !erosionState) return
-
-    let frameId = 0
-
-    const tick = () => {
-      const state = stateRef.current
-      if (!state || !runningRef.current) return
-
-      const updated = stepErosion(state, paramsRef.current)
-      onStateUpdate({ ...updated, heightmap: updated.heightmap })
-      paint()
-
-      frameId = requestAnimationFrame(tick)
-    }
-
-    frameId = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(frameId)
-  }, [running, erosionState, onStateUpdate, paint])
+  }, [erosionState, colorMode])
 
   return (
-    <div ref={containerRef} className="noise-canvas">
+    <div className="noise-canvas">
       {erosionState ? (
         <PanZoomViewport label="Current Height Map">
           <canvas

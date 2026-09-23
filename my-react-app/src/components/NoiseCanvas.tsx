@@ -1,19 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import {
-  applyShaping,
-  blendValues,
-  colorForValue,
-  createNoiseSampler,
-  type NoiseLayer,
-} from '../lib/noise'
+import { colorForValue, type NoiseLayer } from '../lib/noise'
+import { compositeLayers, prepareLayers, type MapOffset } from '../lib/generateNoiseTexture'
 import PanZoomViewport from './PanZoomViewport'
 import './NoiseCanvas.css'
 
 type NoiseCanvasProps = {
   layers: NoiseLayer[]
+  offset: MapOffset
 }
 
-export default function NoiseCanvas({ layers }: NoiseCanvasProps) {
+export default function NoiseCanvas({ layers, offset }: NoiseCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [aspect, setAspect] = useState(1)
@@ -49,38 +45,17 @@ export default function NoiseCanvas({ layers }: NoiseCanvasProps) {
       const colorMode = layers[0].params.colorMode
       const image = context.createImageData(width, height)
       const pixels = image.data
-
-      // Pre-create samplers for all visible layers.
-      const activeLayers = layers
-        .filter((l) => l.visible)
-        .map((l) => ({ layer: l, sampler: createNoiseSampler(l.params) }))
+      const active = prepareLayers(layers)
 
       for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
-          let result = 0
-          let first = true
-
-          for (const { layer, sampler } of activeLayers) {
-            const nx = (x / width) * layer.params.scale
-            const ny = (y / width) * layer.params.scale
-            let v = sampler.sample(nx, ny)
-            v = applyShaping(v, layer.shaping)
-
-            if (first) {
-              result = v * layer.opacity
-              first = false
-            } else {
-              result = blendValues(result, v, layer.blendMode, layer.opacity)
-            }
-          }
-
-          result = Math.min(1, Math.max(0, result))
+          const result = compositeLayers(active, x / width + offset.x, y / width + offset.y)
           const [r, g, b] = colorForValue(colorMode, result)
-          const offset = (y * width + x) * 4
-          pixels[offset] = r
-          pixels[offset + 1] = g
-          pixels[offset + 2] = b
-          pixels[offset + 3] = 255
+          const i = (y * width + x) * 4
+          pixels[i] = r
+          pixels[i + 1] = g
+          pixels[i + 2] = b
+          pixels[i + 3] = 255
         }
       }
 
@@ -88,7 +63,7 @@ export default function NoiseCanvas({ layers }: NoiseCanvasProps) {
     })
 
     return () => cancelAnimationFrame(frameId)
-  }, [layers, aspect])
+  }, [layers, aspect, offset])
 
   return (
     <div ref={containerRef} className="noise-canvas">

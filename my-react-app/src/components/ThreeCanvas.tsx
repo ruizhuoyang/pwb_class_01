@@ -1,7 +1,12 @@
 import { useEffect, useImperativeHandle, useRef, type Ref } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { DAY_CYCLE_HOURS_PER_SECOND, type EnvironmentParams } from '../lib/environment'
+import { createEnvironmentScene } from '../lib/environmentScene'
 import './ThreeCanvas.css'
+
+/** How often the playing day cycle reports its time back to the UI. */
+const TIME_REPORT_MS = 200
 
 export type SceneParams = {
   planeSegments: number
@@ -37,6 +42,9 @@ type ThreeCanvasProps = {
   colorMap: HTMLCanvasElement | null
   /** Raw 0..1 square heightfield; its size is derived from the array length. */
   heightfield: Float32Array | null
+  environment: EnvironmentParams
+  /** Called (throttled) while the day cycle advances the time. */
+  onTimeOfDayChange: (hours: number) => void
   ref?: Ref<ThreeCanvasHandle>
 }
 
@@ -45,6 +53,8 @@ export default function ThreeCanvas({
   viewport,
   colorMap,
   heightfield,
+  environment,
+  onTimeOfDayChange,
   ref,
 }: ThreeCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -105,6 +115,15 @@ export default function ThreeCanvas({
     heightfieldRef.current = heightfield
   }, [heightfield])
 
+  const environmentRef = useRef(environment)
+  const onTimeRef = useRef(onTimeOfDayChange)
+  useEffect(() => {
+    environmentRef.current = environment
+  }, [environment])
+  useEffect(() => {
+    onTimeRef.current = onTimeOfDayChange
+  }, [onTimeOfDayChange])
+
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
@@ -136,10 +155,20 @@ export default function ThreeCanvas({
     controlsRef.current = controls
 
     // ── Lights ──
-    scene.add(new THREE.AmbientLight(0xffffff, 0.5))
+    const ambient = new THREE.AmbientLight(0xffffff, 0.5)
+    scene.add(ambient)
     const dir = new THREE.DirectionalLight(0xffffff, 1.2)
     dir.position.set(5, 8, 4)
     scene.add(dir)
+
+    // ── Environment: drives the sun light, ambient, fog, sky, clouds and rain ──
+    const environmentScene = createEnvironmentScene(scene, { sun: dir, ambient }, fog)
+    let timeOfDay = environmentRef.current.timeOfDay
+    let seenTime = timeOfDay
+    let reportedTime = timeOfDay
+    let lastReport = 0
+    let wasPlaying = false
+    let lastFrame = performance.now()
 
     // ── Grid ──
     const grid = new THREE.GridHelper(20, 20, 0x3a3f4b, 0x1e2228)
@@ -260,13 +289,27 @@ export default function ThreeCanvas({
         applyHeightfield()
       }
 
-      // Toggle fog
-      const wantFog = fogEnabledRef.current
-      if (wantFog && !scene.fog) {
-        scene.fog = fog
-      } else if (!wantFog && scene.fog) {
-        scene.fog = null
+      const now = performance.now()
+      const dt = Math.min((now - lastFrame) / 1000, 0.1)
+      lastFrame = now
+
+      // Time comes from the UI, except while the day cycle plays: then the canvas
+      // advances it and reports back. A UI value we didn't report is a user edit.
+      const env = environmentRef.current
+      if (env.timeOfDay !== seenTime) {
+        seenTime = env.timeOfDay
+        if (seenTime !== reportedTime) timeOfDay = seenTime
       }
+      if (env.dayCycle) timeOfDay = (timeOfDay + dt * DAY_CYCLE_HOURS_PER_SECOND) % 24
+      const stopped = wasPlaying && !env.dayCycle
+      if ((env.dayCycle && now - lastReport > TIME_REPORT_MS) || stopped) {
+        lastReport = now
+        reportedTime = timeOfDay
+        onTimeRef.current(timeOfDay)
+      }
+      wasPlaying = env.dayCycle
+      // Fog toggle and weather fog are combined by the environment.
+      environmentScene.update({ ...env, timeOfDay }, dt, fogEnabledRef.current, camera.position)
 
       if (mapVersionRef.current !== currentMapVersion) {
         currentMapVersion = mapVersionRef.current
@@ -304,6 +347,7 @@ export default function ThreeCanvas({
       controls.dispose()
       cameraRef.current = null
       controlsRef.current = null
+      environmentScene.dispose()
       geometry.dispose()
       material.dispose()
       wireMaterial.dispose()
